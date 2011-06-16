@@ -27,10 +27,10 @@
  * @name SQL Parser
  * @author Digital Spy <engineering.software@digitalspy.co.uk>
  * @version 0.1
- * @credit Xataface Web Application Framework for PHP and MySQL (C) 2005-2010  Steve Hannah <shannah@sfu.ca>
+ * @credit Xataface Web Application Framework for PHP and MySQL (c) 2005-2010  Steve Hannah <shannah@sfu.ca>
  */
 
-// Load SQL Parser
+// Load SQL Parser class
 include_once("SQL/Parser.php");
 include_once("SQL/Compiler.php");
 
