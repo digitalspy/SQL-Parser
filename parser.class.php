@@ -24,8 +24,10 @@
  * An SQL parser to split up joined MySQL query statements
  * into single select queries, dynamically.
  *
- * @author  Digital Spy <engineering.software@digitalspy.co.uk>
+ * @name SQL Parser
+ * @author Digital Spy <engineering.software@digitalspy.co.uk>
  * @version 0.1
+ * @credit Xataface Web Application Framework for PHP and MySQL (C) 2005-2010  Steve Hannah <shannah@sfu.ca>
  */
 
 // Load SQL Parser
@@ -127,7 +129,7 @@ class DS_SQL_Parser {
 	 */
 	public function __construct() {
 		
-		// Set an instance of the SQL parser from xataface.com
+		// Set an instance of the SQL parser, turns SQL into an array
 		$this->sql_parser = new SQL_Parser(null, "MySQL");
 		
 		// Turn on debugging
