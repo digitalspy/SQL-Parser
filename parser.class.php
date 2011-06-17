@@ -32,7 +32,6 @@
 
 // Load SQL Parser class
 include_once("SQL/Parser.php");
-include_once("SQL/Compiler.php");
 
 class DS_SQL_Parser {
 	
