@@ -77,15 +77,6 @@ class SQL_Parser
     }
 // }}}
 
-	public static function isError($var) {
-		return ($var == false);
-	}
-	
-	public static function raiseError2($message) {
-		throw new Exception("SQL " . $message);
-		return false;
-	}
-
 	/**
 	 * Loads a cached parser for a particular dialect.
 	 */
@@ -154,7 +145,7 @@ class SQL_Parser
             $this->getTok();
             if ( $this->isFunc() ){
             	$val = $this->parseFunctionOpts();
-            	if ( self::isError($val) ){
+            	if ( $this->isError($val) ){
             		
             		return $val;
             	}
@@ -202,10 +193,17 @@ class SQL_Parser
         $message .= str_repeat(' ', abs($this->lexer->tokPtr - 
                                $this->lexer->lineBegin - $length))."^";
         $message .= ' found: "'.$this->tokText.'"';//. Dataface_Error::printStackTrace();
-
-        return self::raiseError2($message);
+		
+		throw new Exception($message);
+		
+        return false;
     }
     // }}}
+	
+    function isError($data, $code = null)
+    {
+        return false;
+    }
 
     // {{{ isType()
     function isType() {
@@ -214,11 +212,14 @@ class SQL_Parser
     // }}}
 
     // {{{ isVal()
-    function isVal() {
-       return (($this->token == 'real_val') ||
-               ($this->token == 'int_val') ||
-               ($this->token == 'text_val') ||
-               ($this->token == 'null'));
+    function isVal($tok=-1) {
+    	if ( $tok === -1 ){
+    		$tok = $this->token;
+    	}
+       return (($tok == 'real_val') ||
+               ($tok == 'int_val') ||
+               ($tok == 'text_val') ||
+               ($tok == 'null'));
     }
     // }}}
 
@@ -318,7 +319,7 @@ class SQL_Parser
                                                 'value'=>$this->tokText);
                     } elseif ($this->isFunc()) {
                         $results = $this->parseFunctionOpts();
-                        if (self::isError($results)) {
+                        if ($this->isError($results)) {
                             return $results;
                         }
                         $results['type'] = 'default_function';
@@ -351,7 +352,7 @@ class SQL_Parser
                         return $this->raiseError('Expected (');
                     }
                     $results = $this->parseSearchClause();
-                    if (self::isError($results)) {
+                    if ($this->isError($results)) {
                         return $results;
                     }
                     $results['type'] = 'check';
@@ -460,14 +461,14 @@ class SQL_Parser
         	$this->getTok();
         	if ( $this->token == 'select' ){
         		$clause['arg_1']['value'] = $this->parseSelect(true);
-        		if ( self::isError($clause['arg_1']['value']) ){
+        		if ( $this->isError($clause['arg_1']['value']) ){
         			return $clause['arg_1']['value'];
         		}
         		$clause['arg_1']['type'] = 'subquery';
         	} else {
         		$this->lexer->pushBack();
         		$clause['arg_1']['value'] = $this->parseSearchClause(true);
-				if ( self::isError($clause['arg_1']['value']) ){
+				if ( $this->isError($clause['arg_1']['value']) ){
 					return $clause['arg_1']['value'];
 				}
 				$clause['arg_1']['type'] = 'subclause';
@@ -524,7 +525,7 @@ class SQL_Parser
         
         } else if ($this->isFunc()){
         	 $result = $this->parseFunctionOpts();
-        	 if ( self::isError($result) ){
+        	 if ( $this->isError($result) ){
         	 	return $result;
         	 }
         	 $clause['arg_1']['value'] = $result;
@@ -589,7 +590,7 @@ class SQL_Parser
 							// parse the set
 							$result = $this->getParams($clause['arg_2']['value'],
 													$clause['arg_2']['type']);
-							if (self::isError($result)) {
+							if ($this->isError($result)) {
 								return $result;
 							}
 						}
@@ -609,14 +610,14 @@ class SQL_Parser
 							$this->getTok();
 							if ( $this->token == 'select' ){
 								$clause['arg_2']['value'] = $this->parseSelect(true);
-								if ( self::isError($clause['arg_2']['value']) ){
+								if ( $this->isError($clause['arg_2']['value']) ){
 									return $clause['arg_2']['value'];
 								}
 								$clause['arg_2']['type'] = 'subquery';
 							} else {
 								$this->lexer->pushBack();
 								$clause['arg_2']['value'] = $this->parseSearchClause(true);
-								if ( self::isError($clause['arg_2']['value']) ){
+								if ( $this->isError($clause['arg_2']['value']) ){
 									return $clause['arg_2']['value'];
 								}
 								$clause['arg_2']['type'] = 'subclause';
@@ -628,7 +629,7 @@ class SQL_Parser
 							}
 						} else if ( $this->isFunc() ){
 							$clause['arg_2']['value'] = $this->parseFunctionOpts();
-							if ( self::isError($clause['arg_2']['value']) ){
+							if ( $this->isError($clause['arg_2']['value']) ){
 								return $clause['arg_2']['value'];
 							}
 							$clause['arg_2']['type'] = 'function';
@@ -644,7 +645,7 @@ class SQL_Parser
         if (in_array($this->token, array('and','or','||','&&'))){//($this->token == 'and') || ($this->token == 'or')) {
             $op = $this->token;
             $subClause = $this->parseSearchClause($subSearch);
-            if (self::isError($subClause)) {
+            if ($this->isError($subClause)) {
                 return $subClause;
             } else {
                 $clause = array('arg_1' => $clause,
@@ -707,7 +708,7 @@ class SQL_Parser
             // parse type parameters
             if ($this->token == '(') {
                 $results = $this->getParams($values, $types);
-                if (self::isError($results)) {
+                if ($this->isError($results)) {
                     return $results;
                 }
                 switch ($fields[$name]['type']) {
@@ -749,7 +750,7 @@ class SQL_Parser
             }
 
             $options = $this->parseFieldOptions();
-            if (self::isError($options)) {
+            if ($this->isError($options)) {
                 return $options;
             }
 
@@ -835,7 +836,7 @@ class SQL_Parser
 				
 			} elseif ($this->isFunc()) {
 				$result = $this->parseFunctionOpts();
-				if (self::isError($result)) {
+				if ($this->isError($result)) {
 					return $result;
 				}
 				//$opts[] = $result;
@@ -848,7 +849,7 @@ class SQL_Parser
 				$this->getTok();
 				if ( $this->token == 'select' ){
 					$result = $this->parseSelect(true);
-					if ( self::isError($result) ) return $result;
+					if ( $this->isError($result) ) return $result;
 					//$this->getTok();
 					$this->getTok();
 					
@@ -858,7 +859,7 @@ class SQL_Parser
 					$opts[] = array('type'=>'subselect', 'table'=>'', 'value'=>$result, 'alias'=>$columnAlias);
 				} else {	
 					$opt  = $this->parseExpression();
-					if ( self::isError($opt) ) return $opt;
+					if ( $this->isError($opt) ) return $opt;
 					$opts[] = $opt;
 					$this->getTok();
 				}
@@ -925,7 +926,7 @@ class SQL_Parser
 				} else if ( $this->isFunc() ){
 					$arg['type'] = 'function';
 					$arg['value'] = $this->parseFunctionOpts();
-					if ( self::isError($arg['value']) ) {
+					if ( $this->isError($arg['value']) ) {
 						return $arg['value'];
 					}
 					$opts['args'][] =& $arg;
@@ -946,7 +947,8 @@ class SQL_Parser
 				$this->getTok();
 				if ( $this->isExpressionOperator() ){
 					$arg = $this->parseExpression($arg);
-					if ( self::isError($arg) ) return $arg;
+					if ( $this->isError($arg) ) return $arg;
+					$this->lexer->pushBack();
 				} else {
 					$this->lexer->pushBack();
 				}
@@ -959,7 +961,8 @@ class SQL_Parser
 				$this->getTok();
 				if ( $this->isExpressionOperator() ){
 					$arg = $this->parseExpression($arg);
-					if ( self::isError($arg) ) return $arg;
+					if ( $this->isError($arg) ) return $arg;
+					$this->lexer->pushBack();
 				} else {
 					$this->lexer->pushBack();
 				}
@@ -969,13 +972,14 @@ class SQL_Parser
 				$arg = array();
 				$arg['type'] = 'function';
 				$arg['value'] =  $this->parseFunctionOpts();
-				if ( self::isError($arg['value']) ){
+				if ( $this->isError($arg['value']) ){
 					return $arg['value'];
 				}
 				$this->getTok();
 				if ( $this->isExpressionOperator() ){
 					$arg = $this->parseExpression($arg);
-					if ( self::isError($arg) ) return $arg;
+					if ( $this->isError($arg) ) return $arg;
+					$this->lexer->pushBack();
 				}
 				else $this->lexer->pushBack();
 				
@@ -987,7 +991,8 @@ class SQL_Parser
 				$this->getTok();
 				if ( $this->isExpressionOperator() ){
 					$arg = $this->parseExpression($arg);
-					if ( self::isError($arg) ) return $arg;
+					if ( $this->isError($arg) ) return $arg;
+					$this->lexer->pushBack();
 				} else $this->lexer->pushBack();
 				$opts['args'][] = & $arg;
 				unset($arg);
@@ -995,12 +1000,23 @@ class SQL_Parser
 			} else if ( $this->token == ','){
 				continue;
 			
-			} else {
+			} else if ( $this->token) {
 				$arg = array();
 				$arg['type'] = $this->token;
 				$arg['value'] = $this->tokText;
+				//echo '['.$arg['type'].'/'.$this->tokText.']';
+				$this->getTok();
+				if ( $this->isExpressionOperator() ){
+					$arg = $this->parseExpression($arg);
+					if ( $this->isError($arg) ) return $arg;
+					$this->lexer->pushBack();
+				}
+				else $this->lexer->pushBack();
+				
 				$opts['args'][] =& $arg;
 				unset($arg);
+			} else {
+				return $this->raiseError("Expecting token but found ".$this->tokText);
 			}
 				
 			
@@ -1066,7 +1082,7 @@ class SQL_Parser
                 if ($this->token == 'ident') {
                     $tree['table_names'][] = $this->tokText;
                     $fields = $this->parseFieldList();
-                    if (self::isError($fields)) {
+                    if ($this->isError($fields)) {
                         return $fields;
                     }
                     $tree['column_defs'] = $fields;
@@ -1105,7 +1121,7 @@ class SQL_Parser
             }
             if ($this->token == '(') {
                 $results = $this->getParams($values, $types);
-                if (self::isError($results)) {
+                if ($this->isError($results)) {
                 	
                     return $results;
                 } else {
@@ -1121,7 +1137,7 @@ class SQL_Parser
                 $results = $this->getParams($values, $types);
                 
                 
-                if (self::isError($results)) {
+                if ($this->isError($results)) {
                 	
                 	
                     return $results;
@@ -1201,7 +1217,7 @@ class SQL_Parser
         while (true){
         	if ($this->token == 'where' ){
 				$clause = $this->parseSearchClause();
-				if (self::isError($clause)) {
+				if ($this->isError($clause)) {
 					return $clause;
 				}
 				$tree['where_clause'] = $clause;
@@ -1235,7 +1251,7 @@ class SQL_Parser
             return $this->raiseError('Expected "where"');
         }
         $clause = $this->parseSearchClause();
-        if (self::isError($clause)) {
+        if ($this->isError($clause)) {
             return $clause;
         }
         $tree['where_clause'] = $clause;
@@ -1295,8 +1311,8 @@ class SQL_Parser
             	//$this->getTok();
             	//$nextTok = $this->token;	// get next token to see if it is an open parenthesis
             	//$this->lexer->pushBack();
-            	
-            	if ( $this->isVal() ){
+            	/*
+            	if ($this->isVal() ){
             		$val = $this->tokText;
             		$type = $this->token;
             		$this->getTok();
@@ -1316,14 +1332,14 @@ class SQL_Parser
                     $coldef = array('type'=>$type , 'value'=>$val, 'alias'=>$columnAlias);
                     if ( $this->isExpressionOperator() ){
                     	$coldef = $this->parseExpression($coldef);
-                    	if ( self::isError($colddef) ) return $colddef;
+                    	if ( $this->isError($colddef) ) return $colddef;
                     }
                     $tree['columns'][] = $coldef;
             		
             	
             	}
             	
-            	else if ($this->token == 'ident' || $this->token == '*' || $this->isVal() ) {
+            	else */if ($this->token == 'ident' || $this->token == '*' || $this->isVal() ) {
             		// The current token is an identifier.
             		//  We needed to include checks for '*' explicitly because the lexer recognizes it as a reserved word.
             		//  We need to check for open parenthesis because function names without open parenthesis
@@ -1359,9 +1375,41 @@ class SQL_Parser
                     	$columnName = $prevTok;
                     	$columnName2 = $columnName;
                     	$columnTable2 = '';
+                    	
+                    } else if ( $this->isVal($prevTok) ){
+                    	$colType = $prevTok;
+                    	$columnName = $prevTokText;
+                    	$columnName2 = $columnName;
+                    	$columnTable2 = '';
+                    
                     } else {
                         return $this->raiseError('Expected column name');
                     }
+                    
+                    
+                    // This part added to try to be able to handle 
+                    // arithmetic expressions.
+                    $coldef = null;
+                    if ( $this->isExpressionOperator() ){
+                    	// If the next token is an expression operator - we need
+                    	// to parse the expression.
+                    	$arg = array('type'=>$colType, 'table'=>$columnTable2, 'value'=>$columnName2, 'alias'=>'');
+                    	$coldef = $this->parseExpression($arg);
+                    	if ( $this->isError($coldef) ){
+                    		return $coldef;
+                    	}
+                    	/*
+                    	$colType = 'expression';
+                    	$columnName2 = $arg;
+                    	$columnTable2 = '';
+                    	$columnName = '';
+                    	$columnTable = '';
+                    	*/
+                    	
+                    	
+                    	
+                    }
+                    
 
 					if ($this->token == 'as') {
                         $this->getTok();
@@ -1372,14 +1420,16 @@ class SQL_Parser
                         }
                     } elseif ($this->token == 'ident') {
                         $columnAlias = $this->tokText;
-                    } else {
+                        
+                    }  else {
                         $columnAlias = '';
                     }
                     
-					$coldef = array('type'=>$colType, 'table'=>$columnTable2, 'value'=>$columnName2, 'alias'=>$columnAlias);
+					if ( !$coldef) $coldef = array('type'=>$colType, 'table'=>$columnTable2, 'value'=>$columnName2, 'alias'=>$columnAlias);
+					$coldef['alias'] = $columnAlias;
 					if ($this->isExpressionOperator() ){
 						$coldef = $this->parseExpression($coldef);
-						if ( self::isError($coldef) ) return $coldef;
+						if ( $this->isError($coldef) ) return $coldef;
 					}
 					$tree['columns'][] = $coldef;
 						// add alternate data structure to keep track of columns in a more consistent manner
@@ -1395,7 +1445,7 @@ class SQL_Parser
                     }
                 } elseif ($this->isFunc()) {
                     $result = $this->parseFunctionOpts();
-					if (self::isError($result)) {
+					if ($this->isError($result)) {
 						return $result;
 					}
 					$tree['set_function'][] = $result;
@@ -1416,7 +1466,7 @@ class SQL_Parser
 					$coldef = array('type'=>'func', 'table'=>'', 'value'=>$result, 'alias'=> $columnAlias);
 					if ( $this->isExpressionOperator() ){
 						$coldef = $this->parseExpression($coldef);
-						if ( self::isError($coldef) ){
+						if ( $this->isError($coldef) ){
 							return $coldef;
 						}
 					}
@@ -1426,7 +1476,7 @@ class SQL_Parser
                 	$this->getTok();
                 	if ( $this->token == 'select' ){
                 		$result = $this->parseSelect(true);
-                		if ( self::isError($result) ) return $result;
+                		if ( $this->isError($result) ) return $result;
                 		//$this->getTok();
                 		$this->getTok();
                 		if ( $this->token == 'as' ) $this->getTok();
@@ -1445,11 +1495,11 @@ class SQL_Parser
                 	} else {
                 		//$this->getTok();
                 		$coldef = $this->parseExpression();
-                		if ( self::isError($coldef) ) return $coldef;
+                		if ( $this->isError($coldef) ) return $coldef;
                 		$this->getTok();
                 		if ( $this->isExpressionOperator() ){
                 			$coldef = $this->parseExpression($coldef);
-                			if ( self::isError($coldef) ) return $coldef;
+                			if ( $this->isError($coldef) ) return $coldef;
                 		}
                 		if ( $this->token == 'as' ) $this->getTok();
                 		$columnAlias = '';
@@ -1511,7 +1561,7 @@ class SQL_Parser
             
             if ($this->token == 'on') {
                 $clause = $this->parseSearchClause();
-                if (self::isError($clause)) {
+                if ($this->isError($clause)) {
                     return $clause;
                 }
                 $tree['table_join_clause'][] = $clause;
@@ -1590,14 +1640,14 @@ class SQL_Parser
             switch ($this->token) {
                 case 'where':
                     $clause = $this->parseSearchClause();
-                    if (self::isError($clause)) {
+                    if ($this->isError($clause)) {
                         return $clause;
                     }
                     $tree['where_clause'] = $clause;
                     break;
                 case 'having':
                 	$clause = $this->parseSearchClause();
-                	if ( self::isError($clause) ){
+                	if ( $this->isError($clause) ){
                 		return $clause;
                 	}
                 	$tree['having_clause'] = $clause;
@@ -1616,7 +1666,7 @@ class SQL_Parser
                         	$col['type'] = 'ident';
                         } else if ( $this->isFunc() ){
                         	$col['value'] = $this->parseFunctionOpts();
-                        	if ( self::isError($col['value'] ) ){
+                        	if ( $this->isError($col['value'] ) ){
                         		return $col['value'];
                         	}
                         	$col['type'] = 'function';
@@ -1655,7 +1705,7 @@ class SQL_Parser
                         	$col['type'] = 'ident';
                         } else if ( $this->isFunc() ){
                         	$col['value'] = $this->parseFunctionOpts();
-                        	if ( self::isError($col['value'] ) ){
+                        	if ( $this->isError($col['value'] ) ){
                         		return $col['value'];
                         	}
                         	$col['type'] = 'function';
@@ -1694,9 +1744,6 @@ class SQL_Parser
                 return $this->raiseError('No initial string specified');
             }
         }
-		
-		// Start trace
-		//xdebug_start_trace("C:\\trace", 4);
 
         // get query action
         $this->getTok();
@@ -1707,7 +1754,7 @@ class SQL_Parser
             case 'select':
             	$this->all_tables=array();
                 $ret = $this->parseSelect();
-                if ( self::isError($ret) ){
+                if ( $this->isError($ret) ){
                 	trigger_error('Failed parsing SQL query on select: '.$string.' . The Error was '.$ret->getMessage(), E_USER_ERROR);
                 }	
                 $ret['all_tables'] = $this->all_tables;
